@@ -96,7 +96,7 @@ except:
 	sys.exit(2)
 mail.select("inbox")
 
-
+data = []
 
 while True:
 
@@ -158,13 +158,18 @@ while True:
 										fullfilename = os.path.abspath(fullfilename)
 			
 								print fullfilename	
-								zfile = zipfile.ZipFile( fullfilename )
-								for finfo in zfile.infolist():
-									print finfo
-									ifile = zfile.open(finfo)
-									line_list = ifile.readlines()
-									logger.info('\nTest' + line_list + '\n')
-									logger.info( '\n'+line_list+'\n')
+								zfile = zipfile.ZipFile( fullfilename, 'r')
+								#for finfo in zfile.infolist():
+								#print finfo
+								
+								ifile = zfile.read(finfo)
+								
+								bytes_io = io.BytesIO(ifile)
+								print bytes_io
+
+								#line_list = ifile.readlines()
+								#logger.info('\nTest' + line_list + '\n')
+								#logger.info( '\n'+line_list+'\n')
 
 								
 
@@ -216,7 +221,7 @@ while True:
 				os.unlink(fullfilename)
 			
 		#Convert the attachments to HTTP req and write to json files
-		l
+		FD = ','
 		for filename in SMTP_send.getfiles(svdir):
 			fullfilename = os.path.join(svdir,filename)
 			fullfilename = os.path.abspath(fullfilename)
@@ -250,13 +255,7 @@ while True:
 				tileSize=float(req_info[4])
 				bdate=req_info[5]
 				edate=req_info[6]
-				print 'west ' + str(west)
-				print 'south ' + str(south)
-				print 'east ' + str(east)
-				print 'north ' + str(north)
-				print 'tileSize ' + str(tileSize)
-				print 'bdate ' + str(bdate)
-				print 'edate ' + str(edate)
+
 				print 'data_names' + str(data_names)
 				
 				uri='http://dev.h2i.sg/ncWMS/wms?request=GetUTFGrid&digits=2&crs=CRS:84'
@@ -276,82 +275,72 @@ while True:
 				ysize=int(0.5+(north-south)/tileSize)
 
 		
-				print xsize
-				print ysize
-		
-		
-				get_req = []
-				for tile in tile_list:
-					#print tile
-					dx=int(int(tile)/xsize)
-					dy=(int(tile)%ysize)
-					for dm in data_names:
-						temp_param_list=dm.split(FD)
-				
-						temp_size = temp_param_list[1]
-				
-						#print temp_param_list
-						layer_idx = 3
-						temp_layer = temp_param_list[2] 
-						while layer_idx < len(temp_param_list):
-							temp_layer += ','
-							temp_layer += temp_param_list[layer_idx]
-							layer_idx += 1
-						#print temp_layer
-				
-						print (r'curl "'+uri+'&time='+bdate+'T00:00:00Z/'+edate+'T23:30:00Z&layers='+temp_layer+'&size='+temp_size+'&bbox='+str(west+dx*tileSize)+','+str(north-(dy+1)*tileSize)+','+str(west+(dx+1)*tileSize)+','+str(north-dy*tileSize)+'" -o '+temp_param_list[0]+'_'+str(tile)+'.json')
-						#tile_list.append(r"\"uri&time=bdateT00:00:00Z/edateT23:30:00Z&layers=dm[3]&size=dm[2]&bbox= west+dx*tileSize , north-(dy+1)*tileSize , west+(dx+1)*tileSize , north-dy*tileSize \" -o  dm[1]_tile .json\n")
-						get_req.append(r'curl "'+uri+'&time='+bdate+'T00:00:00Z/'+edate+'T23:30:00Z&layers='+temp_layer+'&size='+temp_size+'&bbox='+str(west+dx*tileSize)+','+str(north-(dy+1)*tileSize)+','+str(west+(dx+1)*tileSize)+','+str(north-dy*tileSize)+'" -o '+temp_param_list[0]+'_'+str(tile)+'.json')
+				#Zip up the json files before sending email
+				ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+				my_zipfile = ts+'.json_result.zip'
+				my_zipfile = os.path.abspath(os.path.join(svdir,my_zipfile))
+				get_req = []				
+				with zipfile.ZipFile(my_zipfile, 'w') as myzip:
+					for tile in tile_list:
+						#print tile
+						dx=int(int(tile)/xsize)
+						dy=(int(tile)%ysize)
+						for dm in data_names:
+							temp_param_list=dm.split(FD)
+					
+							temp_size = temp_param_list[1]
+					
+							#print temp_param_list
+							layer_idx = 3
+							temp_layer = temp_param_list[2] 
+							while layer_idx < len(temp_param_list):
+								temp_layer += ','
+								temp_layer += temp_param_list[layer_idx]
+								layer_idx += 1
+							
+							print 'layer is: ' + temp_layer
+							print (r'"'+uri+'&time='+bdate+'T00:00:00Z/'+edate+'T23:30:00Z&layers='+temp_layer+'&size='+temp_size+'&bbox='+str(west+dx*tileSize)+','+str(north-(dy+1)*tileSize)+','+str(west+(dx+1)*tileSize)+','+str(north-dy*tileSize)+'" -o '+temp_param_list[0]+'_'+str(tile)+'.json')
+							#tile_list.append(r"\"uri&time=bdateT00:00:00Z/edateT23:30:00Z&layers=dm[3]&size=dm[2]&bbox= west+dx*tileSize , north-(dy+1)*tileSize , west+(dx+1)*tileSize , north-dy*tileSize \" -o  dm[1]_tile .json\n")
+							#get_req.append(r'"'+uri+'&time='+bdate+'T00:00:00Z/'+edate+'T23:30:00Z&layers='+temp_layer+'&size='+temp_size+'&bbox='+str(west+dx*tileSize)+','+str(north-(dy+1)*tileSize)+','+str(west+(dx+1)*tileSize)+','+str(north-dy*tileSize)+'" -o '+temp_param_list[0]+'_'+str(tile)+'.json')
+							req_url=uri+'&time='+bdate+'T00:00:00Z/'+edate+'T23:30:00Z&layers='+temp_layer+'&size='+temp_size+'&bbox='+str(west+dx*tileSize)+','+str(north-(dy+1)*tileSize)+','+str(west+(dx+1)*tileSize)+','+str(north-dy*tileSize)
+							json_file=temp_param_list[0]+'_'+str(tile)+'.json'
 
-				#lines = [line.rstrip('\n') for line in open(os.path.join(os.path.dirname(fullfilename),'curls.log'))]
-				for line in get_req:
-					curls_vars = re.match(r"^curl \"(http.*)\"\s-o\s(.*\.json)$",line)
-					req_url = curls_vars.group(1)
-					json_file = os.path.join(os.path.dirname(fullfilename),curls_vars.group(2))
-					try:
-						logger.info('Sending request : ' + req_url)
-						resp = urllib2.urlopen(req_url)
-					except:
-						logger.error('Problem in getting response for : ' + req_url)
-						continue
-					data = resp.read()
-					with open(json_file,'wb') as outfile:
-						json.dump(data,outfile)
-					outfile.close()
+							try:
+								#logger.info('Sending request : ' + req_url)
+								resp = urllib2.urlopen(req_url)
+								#print resp.read()
+								myzip.writestr(json_file ,resp.read(),compress_type=zipfile.ZIP_DEFLATED)
+								
+							except:
+								#logger.error('Problem in getting response for : ' + req_url)
+								print 'error mark'
+								continue
+
+							
+							
+				myzip.close()
 				
 				#os.system(r"./req_process.sh");
 				#os.system(r'ls -lrth ' + os.path.dirname(fullfilename))
 
-				logger.info('Deleting the original request file and the converted url file')
+				#logger.info('Deleting the original request file and the converted url file')
 				#os.unlink(os.path.join(svdir,r"curls.log"))
-				os.unlink(fullfilename)
+				#os.unlink(fullfilename)
 
-		#Zip up the json files before sending email
-		ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-		my_zipfile = ts+'.json_result.zip'
-		my_zipfile = os.path.abspath(os.path.join(svdir,my_zipfile))
-		with zipfile.ZipFile(my_zipfile, 'w') as myzip:
-			for filename in SMTP_send.getfiles(svdir):
-				fullfilename = os.path.join(svdir,filename)
-				#fullfilename = os.path.abspath(fullfilename)				
-				if(filename.endswith('.json')):
-					logger.info('Adding the json result file ' + fullfilename + ' to zipped archive')
-					myzip.write(fullfilename,os.path.basename(fullfilename))
-			myzip.close()
-		
-		#Reply with new attachments after processing
-		try:
-			logger.info('Replying to: ' + varSender + ' with the zipped archive ' + my_zipfile)
-			if re.search("^re:",varSubject, re.IGNORECASE):				
-				#SMTP_send.reply_att(varSubject,user,pwd)
-				SMTP_send.reply_att(varSubject,user,pwd,varSender,mail_server,svdir)
-			else:
-				varSubject = 'Re: '+ varSubject
-				#SMTP_send.reply_att(varSubject,user,pwd)
-				SMTP_send.reply_att(varSubject,user,pwd,varSender,mail_server,svdir)
-		except:
-			logger.error('Problem in sending email')
-			sys.exit(2)
+				
+				#Reply with new attachments after processing
+				try:
+					logger.info('Replying to: ' + varSender + ' with the zipped archive ' + my_zipfile)
+					if re.search("^re:",varSubject, re.IGNORECASE):				
+						#SMTP_send.reply_att(varSubject,user,pwd)
+						SMTP_send.reply_att(varSubject,user,pwd,varSender,mail_server,svdir)
+					else:
+						varSubject = 'Re: '+ varSubject
+						#SMTP_send.reply_att(varSubject,user,pwd)
+						SMTP_send.reply_att(varSubject,user,pwd,varSender,mail_server,svdir)
+				except:
+					logger.error('Problem in sending email')
+					sys.exit(2)
 
 
 		#Housekeep download folder
@@ -368,7 +357,7 @@ while True:
 
 				
 		logger.info('Finished processing for the email: ' + varSubject + ' from ' + varSender + '\n')
-	time.sleep(60)  # Delay for 1 minute (60 seconds)
+	time.sleep(300)  # Delay for 5 minute (300 seconds)
 		
 #Done
 mail.logout()

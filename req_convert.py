@@ -100,12 +100,33 @@ for filename in SMTP_send.getfiles(svdir):
 					layer_idx += 1
 				#print temp_layer
 				
-				print (r'curl "'+uri+'&time='+bdate+'T00:00:00Z/'+edate+'T23:30:00Z&layers='+temp_layer+'&size='+temp_size+'&bbox='+str(west+dx*tileSize)+','+str(north-(dy+1)*tileSize)+','+str(west+(dx+1)*tileSize)+','+str(north-dy*tileSize)+'" -o '+temp_param_list[0]+'_'+str(tile)+'.json\n')
+				print (r'"'+uri+'&time='+bdate+'T00:00:00Z/'+edate+'T23:30:00Z&layers='+temp_layer+'&size='+temp_size+'&bbox='+str(west+dx*tileSize)+','+str(north-(dy+1)*tileSize)+','+str(west+(dx+1)*tileSize)+','+str(north-dy*tileSize)+'" -o '+temp_param_list[0]+'_'+str(tile)+'.json\n')
 				#tile_list.append(r"\"uri&time=bdateT00:00:00Z/edateT23:30:00Z&layers=dm[3]&size=dm[2]&bbox= west+dx*tileSize , north-(dy+1)*tileSize , west+(dx+1)*tileSize , north-dy*tileSize \" -o  dm[1]_tile .json\n")
-				get_req.append(r'curl "'+uri+'&time='+bdate+'T00:00:00Z/'+edate+'T23:30:00Z&layers='+temp_layer+'&size='+temp_size+'&bbox='+str(west+dx*tileSize)+','+str(north-(dy+1)*tileSize)+','+str(west+(dx+1)*tileSize)+','+str(north-dy*tileSize)+'" -o '+temp_param_list[0]+'_'+str(tile)+'.json\n')
+				get_req.append(r'"'+uri+'&time='+bdate+'T00:00:00Z/'+edate+'T23:30:00Z&layers='+temp_layer+'&size='+temp_size+'&bbox='+str(west+dx*tileSize)+','+str(north-(dy+1)*tileSize)+','+str(west+(dx+1)*tileSize)+','+str(north-dy*tileSize)+'" -o '+temp_param_list[0]+'_'+str(tile)+'.json\n')
 		
 		print len(get_req)
 		print get_req
+
+
+		ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+		my_zipfile = ts+'.json_result.zip'
+		with zipfile.ZipFile(my_zipfile, 'w') as myzip:
+			for line in get_req:
+				req_vars = re.match(r"^\"(http.*)\"\s-o\s(.*\.json)\s$",line)
+				req_url = req_vars.group(1)
+				#json_file = os.path.join(os.path.dirname(fullfilename),req_vars.group(2))
+				json_file = req_vars.group(2)
+				try:
+					#logger.info('Sending request : ' + req_url)
+					resp = urllib2.urlopen(req_url)
+				except:
+					#logger.error('Problem in getting response for : ' + req_url)
+					continue
+
+				myzip.writestr(json_file ,resp.read())
+
+
+
 		
 		#logger.info('Converting the request file ' + fullfilename + ' to list of urls')
 		"""
@@ -113,10 +134,10 @@ for filename in SMTP_send.getfiles(svdir):
 
 		lines = [line.rstrip('\n') for line in open(os.path.join(os.path.dirname(fullfilename),'curls.log'))]
 		for line in lines:
-			curls_vars = re.match(r"^curl \"(http.*)\"\s-o\s(.*\.json)$",line)
-			print str(curls_vars)
-			req_url = curls_vars.group(1)
-			json_file = os.path.join(os.path.dirname(fullfilename),curls_vars.group(2))
+			req_vars = re.match(r"^curl \"(http.*)\"\s-o\s(.*\.json)$",line)
+			print str(req_vars)
+			req_url = req_vars.group(1)
+			json_file = os.path.join(os.path.dirname(fullfilename),req_vars.group(2))
 			try:
 				#logger.info('Sending request : ' + req_url)
 				resp = urllib2.urlopen(req_url)
